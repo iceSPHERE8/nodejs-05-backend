@@ -8,6 +8,7 @@ const app = express();
 
 // Route import
 const feedRoutes = require("./router/feed");
+const authRoutes = require("./router/auth");
 
 const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -48,15 +49,18 @@ app.use((req, res, next) => {
 
     next();
 });
+
 app.use("/feed", feedRoutes);
+app.use("/auth", authRoutes);
 
 app.use((error, req, res, next) => {
     console.log(error);
 
     const status = error.statusCode || 500;
     const message = error.message;
+    const data = error.data;
 
-    res.status(status).json({ message: message });
+    res.status(status).json({ message: message, data: data });
 });
 
 mongoose
