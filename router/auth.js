@@ -31,4 +31,6 @@ router.put(
     authCtroller.signup
 );
 
+router.post("/login", authCtroller.login);
+
 module.exports = router;
