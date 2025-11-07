@@ -6,10 +6,9 @@ const router = express.Router();
 // Controllers import
 const feedController = require("../controller/feed");
 
-
 const { isAuth } = require("../middleware/is-auth");
 
-router.get("/posts", isAuth, feedController.getPosts);
+router.get("/posts", feedController.getPosts);
 router.post(
     "/post",
     [
@@ -22,11 +21,14 @@ router.post(
             .isLength({ max: 140 })
             .withMessage("The content is required 5~140 characters"),
     ],
+    isAuth,
     feedController.createPost
 );
 
+router.post("/post/status/update", feedController.updateStatus);
+router.get("/post/status/:id", feedController.getUserStatus);
 router.get("/post/:id", feedController.getSinglePost);
-router.put("/post/update/:id", feedController.updatePost);
-router.delete("/post/delete/:id", feedController.deletePost);
+router.put("/post/update/:id", isAuth, feedController.updatePost);
+router.delete("/post/delete/:id", isAuth, feedController.deletePost);
 
 module.exports = router;
