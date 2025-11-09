@@ -32,7 +32,9 @@ const fileFilter = (req, file, cb) => {
 };
 
 app.use(bodyParser.json());
-app.use(multer({ storage: fileStorage, fileFilter: fileFilter }).single("image"));
+app.use(
+    multer({ storage: fileStorage, fileFilter: fileFilter }).single("image")
+);
 
 app.use("/images", express.static(path.join(__dirname, "images")));
 
@@ -68,6 +70,11 @@ mongoose
         "mongodb+srv://fatony:hsYansE9PSyD2JIa@cluster0.lqa7wj7.mongodb.net/post?retryWrites=true&w=majority&appName=Cluster0"
     )
     .then((result) => {
-        app.listen(8080);
+        const server = app.listen(8080);
+        const io = require("./socket").init(server);
+
+        io.on("connection", (socket) => {
+            console.log("client convected!");
+        });
     })
     .catch((err) => console.log(err));

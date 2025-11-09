@@ -4,18 +4,21 @@ const { validationResult } = require("express-validator");
 const fs = require("fs");
 const path = require("path");
 
+const socket = require("../socket");
+
 const User = require("../models/user");
 
 exports.getPosts = async (req, res, next) => {
     const currentPage = req.query.page || 1;
-    const perPage = 2;
+    const perPage = 4;
     let totalItems;
 
     try {
         totalItems = await Post.find().countDocuments();
         const posts = await Post.find()
             .skip((currentPage - 1) * perPage)
-            .limit(perPage);
+            .limit(perPage)
+            .sort({ createAt: -1 });
 
         res.status(200).json({
             posts: posts,
@@ -52,10 +55,16 @@ exports.createPost = async (req, res, next) => {
 
     try {
         await post.save();
-        const user = User.findById(userId);
+        const user = await User.findById(userId);
 
         user.posts.push(post);
         await user.save();
+
+        const io = socket.getIO();
+        io.emit("posts", {
+            action: "create",
+            post: post,
+        });
 
         res.status(201).json({
             message: "Post saved success!",
@@ -111,6 +120,12 @@ exports.updatePost = async (req, res, next) => {
 
         const result = await post.save();
 
+        const io = socket.getIO();
+        io.emit("posts", {
+            action: "update",
+            post: post,
+        });
+
         res.status(200).json({
             message: "update success!",
             post: result,
@@ -123,76 +138,74 @@ exports.updatePost = async (req, res, next) => {
     }
 };
 
-exports.deletePost = (req, res, next) => {
-    Post.findById(req.params.id)
-        .then((post) => {
-            if (post.creator.toString() !== req.userId) {
-                const error = new Error("No authorized!");
-                error.statusCode = 403;
-                throw error;
-            }
+exports.deletePost = async (req, res, next) => {
+    try {
+        const post = await Post.findById(req.params.id);
 
-            if (post) {
-                return deleteImage(post.imageUrl).then(() => {
-                    return Post.findOneAndDelete({ _id: req.params.id });
-                });
-            }
-        })
-        .then((result) => {
-            return User.findById(req.userId);
-        })
-        .then((user) => {
-            user.posts.pull(req.params.id);
-            return user.save();
-        })
-        .then((result) => {
-            res.status(200).json({
-                message: "Delete success!",
-            });
-        })
-        .catch((err) => {
-            if (!err.statusCode) {
-                err.statusCode = 404;
-            }
-            next(err);
+        if (post.creator.toString() !== req.userId) {
+            const error = new Error("No authorized!");
+            error.statusCode = 403;
+            throw error;
+        }
+
+        if (post) {
+            await deleteImage(post.imageUrl);
+            await Post.findOneAndDelete({ _id: req.params.id });
+        }
+
+        const user = await User.findById(req.userId);
+
+        user.posts.pull(req.params.id);
+        await user.save();
+
+        const io = socket.getIO();
+        io.emit("posts", {
+            action: "delete",
+            post: post._id,
         });
+
+        res.status(200).json({
+            message: "Delete success!",
+        });
+    } catch (err) {
+        if (!err.statusCode) {
+            err.statusCode = 404;
+        }
+        next(err);
+    }
 };
 
-exports.getUserStatus = (req, res, next) => {
-    User.findById(req.params.id)
-        .then((user) => {
-            res.status(200).json({
-                userStatus: user.status,
-            });
-        })
-        .catch((err) => {
-            if (!err.statusCode) {
-                err.statusCode = 404;
-            }
-            next(err);
+exports.getUserStatus = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        res.status(200).json({
+            userStatus: user.status,
         });
+    } catch (err) {
+        if (!err.statusCode) {
+            err.statusCode = 404;
+        }
+        next(err);
+    }
 };
 
-exports.updateStatus = (req, res, next) => {
-    let loadedUser;
+exports.updateStatus = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.query.user);
 
-    User.findById(req.query.user)
-        .then((user) => {
-            loadedUser = user;
-            user.status = req.body.updateStatus;
-            return user.save();
-        })
-        .then((result) => {
-            res.status(200).json({
-                status: loadedUser.status,
-            });
-        })
-        .catch((err) => {
-            if (!err.statusCode) {
-                err.statusCode = 404;
-            }
-            next(err);
+        user.status = req.body.updateStatus;
+        await user.save();
+
+        res.status(200).json({
+            status: user.status,
         });
+    } catch (err) {
+        if (!err.statusCode) {
+            err.statusCode = 404;
+        }
+        next(err);
+    }
 };
 
 const deleteImage = (imageUrl) => {
@@ -201,7 +214,7 @@ const deleteImage = (imageUrl) => {
     return new Promise((resolve, reject) => {
         fs.unlink(imagePath, (err) => {
             if (err) {
-                console.log(err);
+                throw err;
                 resolve();
             } else {
                 resolve();
