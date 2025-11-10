@@ -6,9 +6,9 @@ const multer = require("multer");
 
 const app = express();
 
-// Route import
-const feedRoutes = require("./router/feed");
-const authRoutes = require("./router/auth");
+const { graphqlHTTP } = require("express-graphql");
+const graphqlSchema = require("./graphql/schema");
+const graphqlResolver = require("./graphql/resolver");
 
 const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -52,8 +52,13 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use("/feed", feedRoutes);
-app.use("/auth", authRoutes);
+app.use(
+    "/graphql",
+    graphqlHTTP({
+        schema: graphqlSchema,
+        rootValue: graphqlResolver,
+    })
+);
 
 app.use((error, req, res, next) => {
     console.log(error);
@@ -70,11 +75,6 @@ mongoose
         "mongodb+srv://fatony:hsYansE9PSyD2JIa@cluster0.lqa7wj7.mongodb.net/post?retryWrites=true&w=majority&appName=Cluster0"
     )
     .then((result) => {
-        const server = app.listen(8080);
-        const io = require("./socket").init(server);
-
-        io.on("connection", (socket) => {
-            console.log("client convected!");
-        });
+        app.listen(8080);
     })
     .catch((err) => console.log(err));
