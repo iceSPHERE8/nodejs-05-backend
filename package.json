@@ -1,15 +1,18 @@
 {
   "dependencies": {
+    "@graphql-yoga/render-graphiql": "^5.16.2",
     "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.0",
     "express": "^5.1.0",
-    "express-graphql": "^0.12.0",
     "express-validator": "^7.3.0",
+    "graphiql": "^5.2.1",
     "graphql": "^16.12.0",
+    "graphql-http": "^1.22.4",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.2",
     "multer": "^2.0.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "validator": "^13.15.23"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

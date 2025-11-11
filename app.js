@@ -6,9 +6,10 @@ const multer = require("multer");
 
 const app = express();
 
-const { graphqlHTTP } = require("express-graphql");
-const graphqlSchema = require("./graphql/schema");
-const graphqlResolver = require("./graphql/resolver");
+const { createHandler } = require("graphql-http/lib/use/express");
+const { renderGraphiQL } = require("@graphql-yoga/render-graphiql");
+const schema = require("./graphql/schema");
+const root = require("./graphql/resolver");
 
 const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -49,16 +50,65 @@ app.use((req, res, next) => {
         "Content-Type, Authorization"
     );
 
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(200);
+    }
+
     next();
 });
 
 app.use(
     "/graphql",
-    graphqlHTTP({
-        schema: graphqlSchema,
-        rootValue: graphqlResolver,
+    createHandler({
+        schema: schema,
+        rootValue: root,
+
+        // context: ({ req }) => {
+        //     // 手动加 CORS 头
+        //     req.res?.setHeader("Access-Control-Allow-Origin", "*");
+        //     req.res?.setHeader(
+        //         "Access-Control-Allow-Methods",
+        //         "POST, GET, OPTIONS"
+        //     );
+        //     req.res?.setHeader(
+        //         "Access-Control-Allow-Headers",
+        //         "Content-Type, Authorization"
+        //     );
+        //     return { req };
+        // },
+
+        formatError: (err) => {
+            if (!err.originalError) {
+                return {
+                    message: err.message,
+                    locations: err.locations,
+                    path: err.path,
+                };
+            }
+            const data = err.originalError.data;
+            const message = err.message || "An error occurred!";
+            const code = err.originalError.statusCode || 500;
+
+            return {
+                message: message,
+                locations: err.locations,
+                path: err.path,
+                extensions: {
+                    status: code,
+                    data: data,
+                },
+            };
+        },
     })
 );
+
+app.use("/graphiql", (req, res) => {
+    res.send(
+        renderGraphiQL({
+            endpoint: "/graphql",
+        })
+    );
+});
 
 app.use((error, req, res, next) => {
     console.log(error);
