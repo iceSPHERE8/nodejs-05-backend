@@ -11,6 +11,8 @@ const { renderGraphiQL } = require("@graphql-yoga/render-graphiql");
 const schema = require("./graphql/schema");
 const root = require("./graphql/resolver");
 
+const { auth } = require("./middleware/auth");
+
 const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, "images");
@@ -57,25 +59,20 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use(auth);
+
 app.use(
     "/graphql",
     createHandler({
         schema: schema,
         rootValue: root,
 
-        // context: ({ req }) => {
-        //     // 手动加 CORS 头
-        //     req.res?.setHeader("Access-Control-Allow-Origin", "*");
-        //     req.res?.setHeader(
-        //         "Access-Control-Allow-Methods",
-        //         "POST, GET, OPTIONS"
-        //     );
-        //     req.res?.setHeader(
-        //         "Access-Control-Allow-Headers",
-        //         "Content-Type, Authorization"
-        //     );
-        //     return { req };
-        // },
+        context: (req) => {
+            return {
+                isAuth: req.raw.isAuth,
+                userId: req.raw.userId,
+            };
+        },
 
         formatError: (err) => {
             if (!err.originalError) {
