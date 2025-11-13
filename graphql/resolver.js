@@ -40,7 +40,7 @@ module.exports = {
         });
 
         const createdUser = await user.save();
-        
+
         // const { password, ...safeUser } = createdUser._doc;
 
         return { ...createdUser, _id: createdUser._id.toString() };
@@ -118,7 +118,7 @@ module.exports = {
         const post = new Post({
             title: postInput.title,
             content: postInput.content,
-            imageUrl: postInput.imageUrl,
+            imageUrl: `/${postInput.imageUrl.replaceAll("\\", "/")}`,
             creator: user,
         });
 
@@ -134,8 +134,16 @@ module.exports = {
         };
     },
 
-    fetchAllPosts: async () => {
-        const posts = await Post.find().populate("creator");
+    fetchAllPosts: async ({ page }) => {
+        if (!page) {
+            page = 1;
+        }
+        const perpage = 2;
+
+        const posts = await Post.find()
+            .skip((page - 1) * perpage)
+            .limit(perpage)
+            .populate("creator");
         const total = await Post.find().countDocuments();
 
         return {
@@ -143,9 +151,26 @@ module.exports = {
                 ...p._doc,
                 _id: p._id.toString(),
                 createdAt: p.createdAt.toISOString(),
-                updatedAt: p.updatedAt.toISOString()
+                updatedAt: p.updatedAt.toISOString(),
             })),
-            total: total,
+            total: Math.ceil(total / perpage),
+        };
+    },
+
+    fetchOnePost: async ({ postId }) => {
+        const post = await Post.findById(postId).populate("creator");
+
+        if (!post) {
+            const error = new Error("No post found!");
+            error.statusCode = 422;
+            throw error;
+        }
+
+        return {
+            ...post._doc,
+            _id: post._id.toString(),
+            createdAt: post.createdAt.toISOString(),
+            updatedAt: post.updatedAt.toISOString(),
         };
     },
 };

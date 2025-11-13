@@ -61,6 +61,20 @@ app.use((req, res, next) => {
 
 app.use(auth);
 
+app.put("/post-image", (req, res, next) => {
+    if(!req.isAuth) {
+        throw new Error("No authenticated!");
+    }
+    if (!req.file) {
+        res.status(200).json({ message: "No file uploaded!" });
+    }
+    if (req.body.oldPath) {
+        deleteImage(req.body.oldPath);
+    }
+
+    res.status(201).json({ message: "File stored!", filePath: req.file.path });
+});
+
 app.use(
     "/graphql",
     createHandler({
@@ -125,3 +139,18 @@ mongoose
         app.listen(8080);
     })
     .catch((err) => console.log(err));
+
+const deleteImage = (imageUrl) => {
+    const imagePath = path.join(__dirname, "..", imageUrl);
+
+    return new Promise((resolve, reject) => {
+        fs.unlink(imagePath, (err) => {
+            if (err) {
+                throw err;
+                resolve();
+            } else {
+                resolve();
+            }
+        });
+    });
+};
