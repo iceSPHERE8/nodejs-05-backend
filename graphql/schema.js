@@ -38,18 +38,21 @@ module.exports = buildSchema(`
     input PostInputData {
         title: String!
         content: String!
-        imageUrl: String!
+        imageUrl: String
     }
 
     type RootQuery {
         login(email: String!, password: String!): AuthData!
         fetchAllPosts(page: Int!): AllPosts!
         fetchOnePost(postId: String!): Post!
+        fetchUserStatus(userId: ID!): User!
     }
 
     type RootMutation {
-        createUser(userInput: UserInputData): User!
-        createPost(postInput: PostInputData): Post!
+        createUser(userInput: UserInputData!): User!
+        createPost(postInput: PostInputData!): Post!
+        editPost(postId: String!, postInput: PostInputData!): Post!
+        editUserStatus(userId: ID!, statusInput: String!): User!
     }
 
     schema {

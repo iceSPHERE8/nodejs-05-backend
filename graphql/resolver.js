@@ -134,6 +134,42 @@ module.exports = {
         };
     },
 
+    editPost: async ({ postId, postInput }, context) => {
+        if(!context.isAuth) {
+            const error = new Error("No authenticated!");
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const post = await Post.findById(postId).populate("creator");
+        if(!post) {
+            const error = new Error("No post found!");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if(post.creator._id.toString() !== context.userId){
+            const error = new Error("No authenticated!");
+            error.statusCode = 401;
+            throw error;
+        }
+
+        post.title = postInput.title;
+        post.content = postInput.content;
+        if(postInput.imageUrl !== "undefined") {
+            post.imageUrl = postInput.imageUrl;
+        }
+
+        const updatedPost = await post.save();
+
+        return {
+            ...updatedPost._doc,
+            _id: updatedPost._id.toString(),
+            createdAt: updatedPost.createdAt.toISOString(),
+            updatedAt: updatedPost.updatedAt.toISOString(),
+        }
+    },
+
     fetchAllPosts: async ({ page }) => {
         if (!page) {
             page = 1;
@@ -162,7 +198,7 @@ module.exports = {
 
         if (!post) {
             const error = new Error("No post found!");
-            error.statusCode = 422;
+            error.statusCode = 404;
             throw error;
         }
 
@@ -173,4 +209,49 @@ module.exports = {
             updatedAt: post.updatedAt.toISOString(),
         };
     },
+
+    fetchUserStatus: async ({ userId }, context) => {
+        if (!context.isAuth) {
+            const error = new Error("No authenticated!");
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const user = await User.findById(userId);
+
+        if(!user) {
+            const error = new Error("No user found!");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        return {
+            ...user._doc,
+            _id: user._id.toString()
+        }
+    },
+
+    editUserStatus: async ({ userId, statusInput }, context) => {
+        if (!context.isAuth) {
+            const error = new Error("No authenticated!");
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const user = await User.findById(userId);
+
+        if(!user) {
+            const error = new Error("No user found!");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        user.status = statusInput;
+        await user.save();
+
+        return {
+            ...user._doc,
+            _id: user._id.toString()
+        }
+    }
 };

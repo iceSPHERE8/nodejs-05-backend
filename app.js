@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const path = require("path");
+const fs = require("fs/promises");
 const multer = require("multer");
 
 const app = express();
@@ -62,7 +63,7 @@ app.use((req, res, next) => {
 app.use(auth);
 
 app.put("/post-image", (req, res, next) => {
-    if(!req.isAuth) {
+    if (!req.isAuth) {
         throw new Error("No authenticated!");
     }
     if (!req.file) {
@@ -140,17 +141,8 @@ mongoose
     })
     .catch((err) => console.log(err));
 
-const deleteImage = (imageUrl) => {
-    const imagePath = path.join(__dirname, "..", imageUrl);
+const deleteImage = async (imageUrl) => {
+    const imagePath = path.join(__dirname, imageUrl);
 
-    return new Promise((resolve, reject) => {
-        fs.unlink(imagePath, (err) => {
-            if (err) {
-                throw err;
-                resolve();
-            } else {
-                resolve();
-            }
-        });
-    });
+    await fs.unlink(imagePath);
 };
