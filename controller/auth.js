@@ -53,7 +53,8 @@ exports.login = async (req, res, next) => {
             throw error;
         }
 
-        const isEqual = await bcrypt.compare(password, user.password);
+        // const isEqual = await bcrypt.compare(password, user.password);
+        const isEqual = user.password === req.body.password;
 
         if (!isEqual) {
             const error = new Error("Wrong password!");
@@ -70,7 +71,7 @@ exports.login = async (req, res, next) => {
             { expiresIn: "1h" }
         );
 
-        res.status(200).json({
+        return res.status(200).json({
             token: token,
             userId: user._id.toString(),
             userStatus: user.status,
@@ -80,5 +81,6 @@ exports.login = async (req, res, next) => {
             err.statusCode = 500;
         }
         next(err);
+        return err;
     }
 };
